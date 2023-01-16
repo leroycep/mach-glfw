@@ -8,6 +8,28 @@ pub fn build(b: *Builder) !void {
     const mode = b.standardReleaseOptions();
     const target = b.standardTargetOptions(.{});
 
+    var options = Options{};
+    if (b.option(bool, "vulkan", "TODO: Add description")) |value| options.vulkan = value;
+    if (b.option(bool, "metal", "TODO: Add description")) |value| options.metal = value;
+    if (b.option(bool, "opengl", "TODO: Add description")) |value| options.opengl = value;
+    if (b.option(bool, "gles", "TODO: Add description")) |value| options.gles = value;
+    if (b.option(bool, "x11", "TODO: Add description")) |value| options.x11 = value;
+    if (b.option(bool, "wayland", "TODO: Add description")) |value| options.wayland = value;
+    if (b.option(bool, "shared", "TODO: Add description")) |value| options.shared = value;
+    if (b.option(bool, "install_libs", "TODO: Add description")) |value| options.install_libs = value;
+    // TODO: Expose system_sdk options in some way?
+    // options.system_sdk = ?
+
+    const lib = try buildLibrary(b, mode, target, options);
+    addGLFWIncludes(lib);
+    if (options.shared) {
+        lib.defineCMacro("GLFW_DLL", null);
+        system_sdk.include(b, lib, options.system_sdk);
+    } else {
+        linkGLFWDependencies(b, lib, options);
+    }
+    lib.install();
+
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&(try testStep(b, mode, target)).step);
     test_step.dependOn(&(try testStepShared(b, mode, target)).step);
