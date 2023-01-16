@@ -86,7 +86,7 @@ pub const pkg = std.build.Pkg{
     .source = .{ .path = sdkPath("/src/main.zig") },
 };
 
-pub const LinkError = error{FailedToLinkGPU} || BuildError;
+pub const LinkError = error{FailedToLinkGPU} || std.mem.Allocator.Error;
 pub fn link(b: *Builder, step: *std.build.LibExeObjStep, options: Options) LinkError!void {
     const lib = try buildLibrary(b, step.build_mode, step.target, options);
     step.linkLibrary(lib);
@@ -99,11 +99,7 @@ pub fn link(b: *Builder, step: *std.build.LibExeObjStep, options: Options) LinkE
     }
 }
 
-pub const BuildError = error{CannotEnsureDependency} || std.mem.Allocator.Error;
-fn buildLibrary(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget, options: Options) BuildError!*std.build.LibExeObjStep {
-    // TODO(build-system): https://github.com/hexops/mach/issues/229#issuecomment-1100958939
-    ensureDependencySubmodule(b.allocator, "upstream") catch return error.CannotEnsureDependency;
-
+fn buildLibrary(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget, options: Options) std.mem.Allocator.Error!*std.build.LibExeObjStep {
     const lib = if (options.shared)
         b.addSharedLibrary("glfw", null, .unversioned)
     else
@@ -206,19 +202,6 @@ fn linkGLFWDependencies(b: *Builder, step: *std.build.LibExeObjStep, options: Op
             }
         },
     }
-}
-
-fn ensureDependencySubmodule(allocator: std.mem.Allocator, path: []const u8) !void {
-    if (std.process.getEnvVarOwned(allocator, "NO_ENSURE_SUBMODULES")) |no_ensure_submodules| {
-        defer allocator.free(no_ensure_submodules);
-        if (std.mem.eql(u8, no_ensure_submodules, "true")) return;
-    } else |_| {}
-    var child = std.ChildProcess.init(&.{ "git", "submodule", "update", "--init", path }, allocator);
-    child.cwd = sdkPath("/");
-    child.stderr = std.io.getStdErr();
-    child.stdout = std.io.getStdOut();
-
-    _ = try child.spawnAndWait();
 }
 
 fn sdkPath(comptime suffix: []const u8) []const u8 {
