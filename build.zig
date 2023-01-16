@@ -21,7 +21,8 @@ pub fn build(b: *Builder) !void {
     // options.system_sdk = ?
 
     const lib = try buildLibrary(b, mode, target, options);
-    addGLFWIncludes(lib);
+    lib.installHeadersDirectory(sdkPath("/upstream/glfw/include"), "");
+    lib.installHeadersDirectory(sdkPath("/upstream/vulkan_headers/include"), "");
     if (options.shared) {
         lib.defineCMacro("GLFW_DLL", null);
         system_sdk.include(b, lib, options.system_sdk);
@@ -90,7 +91,8 @@ pub const LinkError = error{FailedToLinkGPU} || std.mem.Allocator.Error;
 pub fn link(b: *Builder, step: *std.build.LibExeObjStep, options: Options) LinkError!void {
     const lib = try buildLibrary(b, step.build_mode, step.target, options);
     step.linkLibrary(lib);
-    addGLFWIncludes(step);
+    lib.installHeadersDirectory(sdkPath("/upstream/glfw/include"), "");
+    lib.installHeadersDirectory(sdkPath("/upstream/vulkan_headers/include"), "");
     if (options.shared) {
         step.defineCMacro("GLFW_DLL", null);
         system_sdk.include(b, step, options.system_sdk);
@@ -110,7 +112,8 @@ fn buildLibrary(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget
     if (options.shared)
         lib.defineCMacro("_GLFW_BUILD_DLL", null);
 
-    addGLFWIncludes(lib);
+    lib.installHeadersDirectory(sdkPath("/upstream/glfw/include"), "");
+    lib.installHeadersDirectory(sdkPath("/upstream/vulkan_headers/include"), "");
     try addGLFWSources(b, lib, options);
     linkGLFWDependencies(b, lib, options);
 
@@ -118,11 +121,6 @@ fn buildLibrary(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget
         lib.install();
 
     return lib;
-}
-
-fn addGLFWIncludes(step: *std.build.LibExeObjStep) void {
-    step.addIncludePath(sdkPath("/upstream/glfw/include"));
-    step.addIncludePath(sdkPath("/upstream/vulkan_headers/include"));
 }
 
 fn addGLFWSources(b: *Builder, lib: *std.build.LibExeObjStep, options: Options) std.mem.Allocator.Error!void {
